@@ -1,0 +1,20 @@
+'use strict';
+const menu = document.querySelector('.menu-toggle');
+const nav = document.querySelector('#primary-nav');
+menu?.addEventListener('click', () => {const open=menu.getAttribute('aria-expanded')!=='true';menu.setAttribute('aria-expanded',String(open));nav.classList.toggle('open',open);});
+document.addEventListener('keydown',e=>{if(e.key==='Escape' && nav?.classList.contains('open')){nav.classList.remove('open');menu.setAttribute('aria-expanded','false');menu.focus();}});
+const dialog=document.querySelector('#site-search');
+document.querySelector('[data-open-search]')?.addEventListener('click',()=>{dialog.showModal();dialog.querySelector('input').focus();});
+dialog?.querySelector('[data-close-search]').addEventListener('click',()=>dialog.close());
+dialog?.addEventListener('click',e=>{if(e.target===dialog){const r=dialog.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)dialog.close();}});
+const siteInput=document.querySelector('#site-query');
+siteInput?.addEventListener('input',()=>{const q=siteInput.value.trim().toLowerCase();const list=document.querySelector('#search-results');list.replaceChildren();const items=q?(window.SITE_INDEX||[]).filter(p=>(p.title+' '+p.text).toLowerCase().includes(q)).slice(0,12):[];document.querySelector('#search-status').textContent=q?`${items.length} matching pages${items.length===12?' (first 12)':''}`:'Search publications, projects, people, courses, and news.';for(const p of items){const li=document.createElement('li'),a=document.createElement('a'),excerpt=document.createElement('p');a.href=document.body.dataset.root+p.url;a.textContent=p.title;const idx=p.text.toLowerCase().indexOf(q);excerpt.textContent=p.text.slice(Math.max(0,idx-45),Math.max(0,idx-45)+190)+'…';li.append(a,excerpt);list.append(li);}});
+const pubs=[...document.querySelectorAll('.publication')];
+if(pubs.length && document.querySelector('#pub-query')){
+ let category='all'; const query=document.querySelector('#pub-query'),year=document.querySelector('#pub-year'),buttons=[...document.querySelectorAll('[data-filter]')];
+ const params=new URLSearchParams(location.search); if(buttons.some(b=>b.dataset.filter===params.get('topic')))category=params.get('topic');
+ function filter(){let shown=0;const q=query.value.toLowerCase().trim();pubs.forEach(p=>{p.hidden=!((category==='all'||p.dataset.category===category)&&(year.value==='all'||p.dataset.year===year.value)&&p.querySelector('.citation').textContent.toLowerCase().includes(q));if(!p.hidden)shown++;});buttons.forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.filter===category)));document.querySelector('#pub-status').textContent=`Showing ${shown} of ${pubs.length} journal publications`;document.querySelector('#no-publications').hidden=shown>0;}
+ buttons.forEach(b=>b.addEventListener('click',()=>{category=b.dataset.filter;filter();}));query.addEventListener('input',filter);year.addEventListener('change',filter);document.querySelector('#reset-filters').addEventListener('click',()=>{category='all';query.value='';year.value='all';filter();query.focus();});filter();
+}
+document.querySelectorAll('.copy-citation').forEach(b=>b.addEventListener('click',async()=>{const p=b.closest('.publication').querySelector('.citation').cloneNode(true);p.querySelector('.category-label')?.remove();const text=p.textContent.trim();try{if(!navigator.clipboard)throw Error();await navigator.clipboard.writeText(text);b.textContent='Copied';}catch{const t=document.createElement('textarea');t.value=text;document.body.append(t);t.select();const ok=document.execCommand('copy');t.remove();b.textContent=ok?'Copied':'Select citation to copy';}setTimeout(()=>b.textContent='Copy citation',2500);}));
+document.querySelectorAll('[data-load-tool]').forEach(b=>b.addEventListener('click',()=>{const frame=document.createElement('iframe');frame.className='tool-frame';frame.src=b.dataset.loadTool;frame.title=b.dataset.title;frame.loading='lazy';b.parentElement.append(frame);b.remove();}));
